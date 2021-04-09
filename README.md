@@ -1,2 +1,2 @@
 # Microarrays
-PEC1 de ADO
+PEC1 de ADO de la UOC
