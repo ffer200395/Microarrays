@@ -53,6 +53,8 @@ knitr::opts_chunk$set(echo = TRUE)
 if (!(require(BiocManager))) install.packages("BiocManager")
 if (!require(affy))BiocManager::install("affy")
 if (!require(Biobase))BiocManager::install("Biobase")
+if (!require(simpleaffy))BiocManager::install("simpleaffy")
+if (!require(affyPLM))BiocManager::install("affyPLM")
 ```
 
 
@@ -92,5 +94,19 @@ for(i in 1:length(all_files)){
 # Por último leemos los archivos .CEL que nos interesa y creamos un objeto de tipo AffyBatch
 rawData <- read.affybatch(filenames = file.path(rawDataDir,selectFiles),phenoData=AnnotatedDataFrame(myTargets))
 
+# Los grupos presentes en el experimento son
+unique(myTargets["karyotype"])
+
+# Tipo de placa
+cdfName(rawData)
+
+library(simpleaffy)
+library(affyPLM)
+# Control de calidad en crudo
+qualityAnalysisRaw <- qc(rawData)
+plot(qualityAnalysisRaw)
+
+# Normalización
+processedData <- affy::rma(rawData)
 ```
 
