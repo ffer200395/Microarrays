@@ -16,11 +16,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 [3.Materiales y métodos](#matmet)
 
-  [3.1.Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados](#datos)
+[3.1.Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados](#datos)
   
-  [3.2.Métodos utilizados en el análisis (Pipeline)](#pipeline)
+[3.2.Métodos utilizados en el análisis (Pipeline)](#pipeline)
   
-  [3.3.Descripción cualitativa de cada paso](#steps)
+[3.3.Descripción cualitativa de cada paso](#steps)
 
 [4.Resultados del análisis](#resultados)
 
@@ -49,21 +49,48 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## 6.Apéndice {#apendice}
 
-
-
-
-
-
-
-
-
-
-```{r cars}
-summary(cars)
-```
-
-
-
 ```{r imports, message=FALSE}
-if (!(require(car))) install.packages("car")
+if (!(require(BiocManager))) install.packages("BiocManager")
+if (!require(affy))BiocManager::install("affy")
+if (!require(Biobase))BiocManager::install("Biobase")
 ```
+
+
+```{r load}
+library(Biobase)
+library(affy)
+
+# Directorios
+workingDir <- getwd()
+rawDataDir <- file.path(workingDir, "raw_data")
+resultsDir <- file.path(workingDir, "results")
+
+# Función para elegir muestras aleatoriamente
+selectSamples<- function (myID){
+ set.seed(myID)
+ selected <- c(sample(1:10, 6),11, sample(12:26, 5), sample(27:36,6))
+ selected <- sort(selected)
+}
+
+# Seleccionamos las muestras y almacenamos el nombre de los archivos .CEL
+mySelected <- selectSamples(49044820)
+targetsAll <- read.csv(file="targetsAll.csv", row.names = 1, head=TRUE)
+myTargets <- targetsAll[mySelected,]
+fileNames <- row.names(myTargets)
+
+# Obtenemos el nombre completo de los archivos .CEL
+all_files <- list.files("raw_data/", pattern = "*.CEL.gz", full.names = FALSE) # Todos
+selectFiles <- c() # Los que se necesitan
+for(i in 1:length(all_files)){
+  fullName = all_files[i]
+  name = unlist(strsplit(fullName,"_"))[1] 
+  if(is.element(name,fileNames)){ # Si el nombre está en nuestro listado entonces lo añadimos
+    selectFiles <- c(selectFiles,fullName)
+  }
+}
+
+# Por último leemos los archivos .CEL que nos interesa y creamos un objeto de tipo AffyBatch
+rawData <- read.affybatch(filenames = file.path(rawDataDir,selectFiles),phenoData=AnnotatedDataFrame(myTargets))
+
+```
+

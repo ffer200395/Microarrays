@@ -393,15 +393,43 @@ pre code {
 </div>
 <div id="apendice" class="section level2">
 <h2>6.Apéndice</h2>
-<pre class="r"><code>summary(cars)</code></pre>
-<pre><code>##      speed           dist       
-##  Min.   : 4.0   Min.   :  2.00  
-##  1st Qu.:12.0   1st Qu.: 26.00  
-##  Median :15.0   Median : 36.00  
-##  Mean   :15.4   Mean   : 42.98  
-##  3rd Qu.:19.0   3rd Qu.: 56.00  
-##  Max.   :25.0   Max.   :120.00</code></pre>
-<pre class="r"><code>if (!(require(car))) install.packages(&quot;car&quot;)</code></pre>
+<pre class="r"><code>if (!(require(BiocManager))) install.packages(&quot;BiocManager&quot;)
+if (!require(affy))BiocManager::install(&quot;affy&quot;)
+if (!require(Biobase))BiocManager::install(&quot;Biobase&quot;)</code></pre>
+<pre class="r"><code>library(Biobase)
+library(affy)
+
+# Directorios
+workingDir &lt;- getwd()
+rawDataDir &lt;- file.path(workingDir, &quot;raw_data&quot;)
+resultsDir &lt;- file.path(workingDir, &quot;results&quot;)
+
+# Función para elegir muestras aleatoriamente
+selectSamples&lt;- function (myID){
+ set.seed(myID)
+ selected &lt;- c(sample(1:10, 6),11, sample(12:26, 5), sample(27:36,6))
+ selected &lt;- sort(selected)
+}
+
+# Seleccionamos las muestras y almacenamos el nombre de los archivos .CEL
+mySelected &lt;- selectSamples(49044820)
+targetsAll &lt;- read.csv(file=&quot;targetsAll.csv&quot;, row.names = 1, head=TRUE)
+myTargets &lt;- targetsAll[mySelected,]
+fileNames &lt;- row.names(myTargets)
+
+# Obtenemos el nombre completo de los archivos .CEL
+all_files &lt;- list.files(&quot;raw_data/&quot;, pattern = &quot;*.CEL.gz&quot;, full.names = FALSE) # Todos
+selectFiles &lt;- c() # Los que se necesitan
+for(i in 1:length(all_files)){
+  fullName = all_files[i]
+  name = unlist(strsplit(fullName,&quot;_&quot;))[1] 
+  if(is.element(name,fileNames)){ # Si el nombre está en nuestro listado entonces lo añadimos
+    selectFiles &lt;- c(selectFiles,fullName)
+  }
+}
+
+# Por último leemos los archivos .CEL que nos interesa y creamos un objeto de tipo AffyBatch
+rawData &lt;- read.affybatch(filenames = file.path(rawDataDir,selectFiles),phenoData=AnnotatedDataFrame(myTargets))</code></pre>
 </div>
 
 
