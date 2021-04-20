@@ -1,0 +1,69 @@
+---
+title: "Identificación de genes que intervienen en la patogénesis del síndrome de Turner"
+author: "Félix Francisco Enríquez Romero"
+date: "20/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## INDICE
+[1.Abstract](#abstract)
+
+[2.Objetivos](#objetivos)
+
+[3.Materiales y métodos](#matmet)
+
+  [3.1.Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados](#datos)
+  
+  [3.2.Métodos utilizados en el análisis (Pipeline)](#pipeline)
+  
+  [3.3.Descripción cualitativa de cada paso](#steps)
+
+[4.Resultados del análisis](#resultados)
+
+[5.Discusión](#dicusion)
+
+[6.Apéndice](#apendice)
+
+
+
+
+## 1.Abstract {#abstract}
+
+## 2.Objetivos {#objetivos}
+
+## 3.Materiales y métodos {#matmet}
+
+## 3.1.Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados {#datos}
+
+## 3.2.Métodos utilizados en el análisis (Pipeline) {#pipeline}
+
+## 3.3.Descripción cualitativa de cada paso {#steps}
+
+## 4.Resultados del análisis {#resultados}
+
+## 5.Discusión {#dicusion}
+
+## 6.Apéndice {#apendice}
+
+
+
+
+
+
+
+
+
+
+```{r cars}
+summary(cars)
+```
+
+
+
+```{r imports, message=FALSE}
+if (!(require(car))) install.packages("car")
+```
