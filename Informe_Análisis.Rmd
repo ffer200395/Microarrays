@@ -57,8 +57,7 @@ if (!require(simpleaffy))BiocManager::install("simpleaffy")
 if (!require(affyPLM))BiocManager::install("affyPLM")
 ```
 
-
-```{r load}
+```{r load_norm}
 library(Biobase)
 library(affy)
 
@@ -94,19 +93,52 @@ for(i in 1:length(all_files)){
 # Por último leemos los archivos .CEL que nos interesa y creamos un objeto de tipo AffyBatch
 rawData <- read.affybatch(filenames = file.path(rawDataDir,selectFiles),phenoData=AnnotatedDataFrame(myTargets))
 
+# Normalización
+processedData <- affy::rma(rawData)
+
+# Para tener unos nombres más intuitivos
+myTargets$title->colnames(exprs(rawData))
+
+
 # Los grupos presentes en el experimento son
-unique(myTargets["karyotype"])
+#unique(myTargets['karyotype'])
 
 # Tipo de placa
-cdfName(rawData)
+#cdfName(rawData)
+```
 
+```{r qcRaw}
 library(simpleaffy)
 library(affyPLM)
+
+# Diagrama de cajas para obtener una idea de las distribución de las intensidades de las distintas muestras
+boxplot(rawData, cex.axis=0.8, las=2, col=c(rep("red", 6), rep("blue", 6), rep("green", 6)),main="Distribución de los valores de intensidad en crudo")
+
+# Histograma para conocer si las distribuciones de los distintos arrays son similares
+hist(rawData)
+
+# Cluster jerarquico
+plot(hclust(dist(t(exprs(rawData))),method = "average"))
+
+# Hacemos Anális de Comonentes Principales (PCA)
+PCA_s <- prcomp(t(exprs(rawData)))
+plot(PCA_s$x[, 1:2],pch=18, col="blue")
+text(PCA_s$x[, 1:2], row.names(PCA_s$x), cex=0.7, pos=4, offset = 0,col="red")
+
 # Control de calidad en crudo
 qualityAnalysisRaw <- qc(rawData)
 plot(qualityAnalysisRaw)
-
-# Normalización
-processedData <- affy::rma(rawData)
 ```
 
+```{r }
+# Para tener unos nombres más intuitivos
+#myTargets$title->
+colnames(processedData)<-myTargets$title
+boxplot(processedData, cex.axis=0.8, las=2, col=c(rep("red", 6), rep("blue", 6), rep("green", 6)),main="Distribución de los valores de intensidad en crudo")
+
+```
+
+
+```{r gde}
+
+```
