@@ -183,22 +183,21 @@ abline(v=c(-1,1))
 ```
 
 ```{r anotacion}
-library(annaffy)
 library(hgu133plus2.db)
-topTab_XmvsXp_anno <- aafTableAnn(topTab_XmvsXp, hgu133plus2.db, aaf.handler())
+#library(annaffy)
+#topTab_XmvsXp_anno <- aafTableAnn(topTab_XmvsXp, hgu133plus2.db, aaf.handler())
 library(affycoretools)
-test <- annotateEset(topTab_XmvsXp, hgu133plus2.db)
+#test <- annotateEset(topTab_XmvsXp, hgu133plus2.db)
 
 
 annotatedTopTable <- function(topTab, anotPackage){
   topTab <- cbind(PROBEID=rownames(topTab), topTab)
   myProbes <- rownames(topTab)
   thePackage <- eval(parse(text = anotPackage))
-+   geneAnots <- select(thePackage, myProbes, c("SYMBOL", "ENTREZID", "GENENAME"))
-+   annotatedTopTab<- merge(x=geneAnots, y=topTab, by.x="PROBEID", by.y="PROBEID")
-+ return(annotatedTopTab)
-+ }
+  geneAnots <- select(thePackage, myProbes, c("SYMBOL", "ENTREZID", "GENENAME"))
+  annotatedTopTab<- merge(x=geneAnots, y=topTab, by.x="PROBEID", by.y="PROBEID")
+  return(annotatedTopTab)}
 
-topAnnotated_KOvsWT.COLD <- annotatedTopTable(topTab_KOvsWT.COLD,
-+ anotPackage="mogene21sttranscriptcluster.db")
+test1 <- annotatedTopTable(topTab_XmvsXp,anotPackage="hgu133plus2.db")
+head(test1,5)
 ```
