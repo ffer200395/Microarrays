@@ -50,8 +50,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ## 6.Apéndice {#apendice}
 
 ```{r imports, message=FALSE}
+if (!(require(stringr))) install.packages("stringr")
+if (!(require(tm))) install.packages("tm")
 if (!(require(BiocManager))) install.packages("BiocManager")
 if (!require(affy))BiocManager::install("affy")
+if (!require(affycoretools))BiocManager::install("affycoretools")
+
+if (!(require(hgu133plus2.db)))BiocManager::install("hgu133plus2.db")
 if (!require(Biobase))BiocManager::install("Biobase")
 if (!require(simpleaffy))BiocManager::install("simpleaffy")
 if (!require(affyPLM))BiocManager::install("affyPLM")
@@ -60,6 +65,7 @@ if (!require(affyPLM))BiocManager::install("affyPLM")
 ```{r load_norm}
 library(Biobase)
 library(affy)
+library(tm)
 
 # Directorios
 workingDir <- getwd()
@@ -89,6 +95,8 @@ for(i in 1:length(all_files)){
     selectFiles <- c(selectFiles,fullName)
   }
 }
+
+myTargets$karyotype <- removeNumbers(myTargets$karyotype)
 
 # Por último leemos los archivos .CEL que nos interesa y creamos un objeto de tipo AffyBatch
 rawData <- read.affybatch(filenames = file.path(rawDataDir,selectFiles),phenoData=AnnotatedDataFrame(myTargets))
@@ -134,11 +142,63 @@ plot(qualityAnalysisRaw)
 # Para tener unos nombres más intuitivos
 #myTargets$title->
 colnames(processedData)<-myTargets$title
-boxplot(processedData, cex.axis=0.8, las=2, col=c(rep("red", 6), rep("blue", 6), rep("green", 6)),main="Distribución de los valores de intensidad en crudo")
+#boxplot(processedData, cex.axis=0.8, las=2, col=c(rep("red", 6), rep("blue", 6), rep("green", 6)),main="Distribución de los valores de intensidad en crudo")
+#image(rawData[,7],col=rainbow(100))
+#image(rawData[,1],col=rainbow(100))
 
 ```
 
 
 ```{r gde}
+library(limma)
+library(stringr)
+# 1 Factor de 3 niveles: XX, Xm, Xp-->Matriz de diseño
+grupo <- as.factor(myTargets$karyotype)
+designMatrix <- model.matrix(~0 + grupo)
+colnames(designMatrix) <- str_replace_all(colnames(designMatrix), "grupo","")
 
+# Contrastar Xm vs Xp y Xm+Xp vs XX
+# Ver las diferencias entre las pacientes con TS
+# Ver las diferencias entre las pacientes con TS y las pacientes sanas
+contMatrix <- makeContrasts(XmvsXp = Xm - Xp, XXvsX_ = XX - ((Xp+Xm)/2),levels=designMatrix)
+contMatrix
+
+fit<-lmFit(processedData, designMatrix)
+fit.main<-contrasts.fit(fit, contMatrix)
+fit.main<-eBayes(fit.main)
+class(fit.main)
+
+# Ahora toca obtener las listas de GDEs
+#WT.with.no.Fe <- topTable(contrast.results, number=22810,coef=1,sort.by="logFC")
+topTab_XmvsXp <- topTable (fit.main, number=nrow(fit.main), coef="XmvsXp", adjust="fdr") 
+topTab_XXvsX_ <- topTable (fit.main, number=nrow(fit.main), coef="XXvsX_", adjust="fdr")
+head(topTab_XmvsXp)
+head(topTab_XXvsX_)
+
+
+# Visualización rápida
+volcanoplot(fit.main, coef=1, highlight=4, names=fit.main$ID, 
+             main=paste("Differentially expressed genes", colnames(contMatrix)[1], sep="\n"))
+abline(v=c(-1,1))
+```
+
+```{r anotacion}
+library(annaffy)
+library(hgu133plus2.db)
+topTab_XmvsXp_anno <- aafTableAnn(topTab_XmvsXp, hgu133plus2.db, aaf.handler())
+library(affycoretools)
+test <- annotateEset(topTab_XmvsXp, hgu133plus2.db)
+
+
+annotatedTopTable <- function(topTab, anotPackage){
+  topTab <- cbind(PROBEID=rownames(topTab), topTab)
+  myProbes <- rownames(topTab)
+  thePackage <- eval(parse(text = anotPackage))
++   geneAnots <- select(thePackage, myProbes, c("SYMBOL", "ENTREZID", "GENENAME"))
++   annotatedTopTab<- merge(x=geneAnots, y=topTab, by.x="PROBEID", by.y="PROBEID")
++ return(annotatedTopTab)
++ }
+
+topAnnotated_KOvsWT.COLD <- annotatedTopTable(topTab_KOvsWT.COLD,
++ anotPackage="mogene21sttranscriptcluster.db")
 ```
