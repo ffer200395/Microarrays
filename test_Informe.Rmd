@@ -1,0 +1,80 @@
+---
+title: "test_Informe"
+author: "Félix Francisco Enríquez Romero"
+date: "20/4/2021"
+output:
+  html_document:
+    toc: yes
+    df_print: paged
+  prettydoc::html_pretty:
+    toc: yes
+    theme: cayman
+    highlight: github
+    number_sections: yes
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
+                      comment = NA, prompt = TRUE, tidy = FALSE, 
+                      fig.width = 7, fig.height = 7, fig_caption = TRUE,
+                      cache=FALSE)
+Sys.setlocale("LC_TIME", "C")
+```
+
+# 1. Abstract
+
+# 2. Objetivos
+
+# 3. Materiales y métodos
+
+## 3.1. Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados 
+
+## 3.2. Métodos utilizados en el análisis (Pipeline)
+
+## 3.3. Descripción cualitativa de cada paso
+
+### 3.3.1. Carga de los datos
+
+- Objetivo: Crear un objeto del tipo AffyBatch con el que poder comenzar el análisis de los datos.
+
+- Input: Para cear un objeto AffyBatch partimos de un conjunto de **archivos .CEL** y un archivo **targetsAll.csv** que usaremos para la selección de muestras y dar a estas un nombre más intuitivo.
+
+- Output: Objeto AffyBatch llamado **rawData** sobre el que empezaremos a trabajar.
+
+### 3.3.2. Control de calidad de los datos en crudo
+
+- Objetivo: Determinar si los datos de las muestra datos es de suficiente para su posterior normalización o si es necesario eliminar alguna para mejorar la calidad del experimento.
+
+- Input: Objeto AffyBatch **rawData** generado anteriormente.
+
+- Output: Boxplot **boxplot_qcRaw.png**, histograma **hist_qcRaw.png** y salida de la función qc() **qc_statsRaw.png**.
+
+### 3.3.3. Normalización
+
+- Objetivo: Corregir diferencias sistemáticas entre las muestras y transformar los datos de forma que estos sean comparables entre sí.
+
+- Input: Objeto AffyBatch **rawData**.
+
+- Output: Objeto ExpressionSet **processedData** obtenido al aplicar la función rma() del paquete affy (almacenado en **normalized.Data.csv**).
+
+### 3.3.4. Filtraje no específico
+
+- Objetivo: Eliminar ruido de fondo mediante la eliminación de genes que no muestran una variación significativa en su señal.
+
+- Input: Objeto ExpressionSet **processedData** obtenido en el paso previo.
+
+- Output: Objeto ExpresionSet **pro_filt_data** obtenido tras aplicar la función nsFilter() del paquete genefilter (almacenado en **normalized.Filtered.Data.csv**).
+
+### 3.3.5. Selección de genes diferencialmente expresados
+
+
+
+
+Que habéis hecho en cada paso. Descripción cualitativa indicando porque se ha llevado a cabo cada paso, y cual ha sido el “input” suministrado al procedimiento y el “output” obtenido.
+
+# 4. Resultados del análisis
+
+# 5. Discusión
+
+# 6. Apéndice
