@@ -1637,28 +1637,35 @@ pre code {
 <li><a href="#control-de-calidad-de-los-datos-en-crudo">3.3.2. Control de calidad de los datos en crudo</a></li>
 <li><a href="#normalización">3.3.3. Normalización</a></li>
 <li><a href="#filtraje-no-específico">3.3.4. Filtraje no específico</a></li>
-<li><a href="#selección-de-genes-diferencialmente-expresados">3.3.5. Selección de genes diferencialmente expresados</a></li>
+<li><a href="#selección-y-anotación-de-genes-diferencialmente-expresados">3.3.5. Selección y anotación de genes diferencialmente expresados</a></li>
+<li><a href="#análisis-de-la-significación-biológica-gene-enrichment-analysis">3.3.6. Análisis de la significación biológica (“Gene Enrichment Analysis”)</a></li>
 </ul></li>
 </ul></li>
 <li><a href="#resultados-del-análisis">4. Resultados del análisis</a></li>
-<li><a href="#discusión">5. Discusión</a></li>
-<li><a href="#apéndice">6. Apéndice</a></li>
+<li><a href="#apéndice">5. Apéndice</a></li>
 </ul>
 </div>
 
 <div id="abstract" class="section level1">
 <h1>1. Abstract</h1>
+<p>Resumen, máximo 5 lineas</p>
 </div>
 <div id="objetivos" class="section level1">
 <h1>2. Objetivos</h1>
+<p>Qué se pretende con el estudio</p>
 </div>
 <div id="materiales-y-métodos" class="section level1">
 <h1>3. Materiales y métodos</h1>
 <div id="naturaleza-de-los-datos-tipo-de-experimento-diseño-experimental-y-tipo-de-microarrays-utilizados" class="section level2">
 <h2>3.1. Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados</h2>
+<p>Comparativo…</p>
+<p>Matriz de sieño contraste…</p>
+<p>Tipo de microarray affymetrix…</p>
+<p>Anotación…</p>
 </div>
 <div id="métodos-utilizados-en-el-análisis-pipeline" class="section level2">
 <h2>3.2. Métodos utilizados en el análisis (Pipeline)</h2>
+<p>Contar de manera general todo lo realizado en el código</p>
 </div>
 <div id="descripción-cualitativa-de-cada-paso" class="section level2">
 <h2>3.3. Descripción cualitativa de cada paso</h2>
@@ -1694,20 +1701,29 @@ pre code {
 <li><p>Output: Objeto ExpresionSet <strong>pro_filt_data</strong> obtenido tras aplicar la función nsFilter() del paquete genefilter (almacenado en <strong>normalized.Filtered.Data.csv</strong>).</p></li>
 </ul>
 </div>
-<div id="selección-de-genes-diferencialmente-expresados" class="section level3">
-<h3>3.3.5. Selección de genes diferencialmente expresados</h3>
-<p>Que habéis hecho en cada paso. Descripción cualitativa indicando porque se ha llevado a cabo cada paso, y cual ha sido el “input” suministrado al procedimiento y el “output” obtenido.</p>
+<div id="selección-y-anotación-de-genes-diferencialmente-expresados" class="section level3">
+<h3>3.3.5. Selección y anotación de genes diferencialmente expresados</h3>
+<ul>
+<li><p>Objetivo: Determinar que genes son los que se están expresando de manera diferencial de estadísiticamente significativa.</p></li>
+<li><p>Input: Objeto ExpresionSet <strong>pro_filt_data</strong> con los datos normalizados y filtrados.</p></li>
+<li><p>Output: Dos data.frame <strong>topTab_XmvsXp</strong> y <strong>topTab_XXvsX_</strong> que contienen las listas de genes anotados con mayor diferencia en su expresión correspondientes a los dos contrastes que hemos realizado. Además los volcano plots han sido almacenados en los archivos <strong>volcPlot_XXX_.png</strong> y <strong>volcPlot_XmXp.png</strong>.</p></li>
+</ul>
+</div>
+<div id="análisis-de-la-significación-biológica-gene-enrichment-analysis" class="section level3">
+<h3>3.3.6. Análisis de la significación biológica (“Gene Enrichment Analysis”)</h3>
+<ul>
+<li><p>Objetivo: Establecer si un proceso biológico o ruta metabólica aparece con mayor o menor frecuencia en la lista de genes seleccionados respecto al conjunto total de genes desde donde se ha obtenido.</p></li>
+<li><p>Input: Las topTable obtenidas en el apartado anterior, <strong>topTab_XmvsXp</strong> y <strong>topTab_XXvsX_</strong>.</p></li>
+<li><p>Output: Archivos .html del anális de enriquecimiento (prefijos GO y KEGG).</p></li>
+</ul>
 </div>
 </div>
 </div>
 <div id="resultados-del-análisis" class="section level1">
 <h1>4. Resultados del análisis</h1>
 </div>
-<div id="discusión" class="section level1">
-<h1>5. Discusión</h1>
-</div>
 <div id="apéndice" class="section level1">
-<h1>6. Apéndice</h1>
+<h1>5. Apéndice</h1>
 </div>
 
 

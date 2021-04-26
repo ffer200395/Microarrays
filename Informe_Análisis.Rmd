@@ -56,7 +56,7 @@ if (!(require(BiocManager))) install.packages("BiocManager")
 if (!require(affy))BiocManager::install("affy")
 if (!require(affycoretools))BiocManager::install("affycoretools")
 if (!require(genefilter))BiocManager::install("genefilter")
-
+if (!require(GOstats))BiocManager::install("GOstats")
 
 if (!(require(hgu133plus2.db)))BiocManager::install("hgu133plus2.db")
 if (!require(Biobase))BiocManager::install("Biobase")
@@ -160,6 +160,7 @@ write.csv(exprs(pro_filt_data), file=paste0(resultsDir,'/normalized.Filtered.Dat
 ```{r gde}
 library(limma)
 library(stringr)
+library(affycoretools)
 # 1 Factor de 3 niveles: XX, Xm, Xp-->Matriz de diseño
 grupo <- as.factor(myTargets$karyotype)
 designMatrix <- model.matrix(~0 + grupo)
@@ -171,7 +172,9 @@ colnames(designMatrix) <- str_replace_all(colnames(designMatrix), "grupo","")
 contMatrix <- makeContrasts(XmvsXp = Xm - Xp, XXvsX_ = XX - ((Xp+Xm)/2),levels=designMatrix)
 contMatrix
 
-fit<-lmFit(processedData, designMatrix)
+# Anotamos los genes para después obtener las topTable anotadas
+pro_filt_data_ann <- annotateEset(pro_filt_data, hgu133plus2.db)
+fit<-lmFit(pro_filt_data_ann, designMatrix)
 fit.main<-contrasts.fit(fit, contMatrix)
 fit.main<-eBayes(fit.main)
 class(fit.main)
@@ -183,12 +186,41 @@ topTab_XXvsX_ <- topTable (fit.main, number=nrow(fit.main), coef="XXvsX_", adjus
 head(topTab_XmvsXp)
 head(topTab_XXvsX_)
 
-
-# Visualización rápida
-volcanoplot(fit.main, coef=2, highlight=10, names=fit.main$ID, 
-             main=paste("Differentially expressed genes", colnames(contMatrix)[2], sep="\n"))
+# Mostramos los volcano plots de ambos contrastes
+geneSymbols <- select(hgu133plus2.db, rownames(fit.main), c("SYMBOL"))
+SYMBOLS<- geneSymbols$SYMBOL
+png(file=paste0(resultsDir,'/volcPlot_XmXp.png'))
+volcanoplot(fit.main, coef=1, highlight=10, names=SYMBOLS, main=paste("Genes diferencialmente expresados", colnames(contMatrix)[1], sep="\n"))
+abline(v=c(-1,1))
+png(file=paste0(resultsDir,'/volcPlot_XXX_.png'))
+volcanoplot(fit.main, coef=2, highlight=10, names=SYMBOLS, main=paste("Genes diferencialmente expresados", colnames(contMatrix)[2], sep="\n"))
 abline(v=c(-1,1))
 ```
+
+
+```{r signicacion}
+library(GOstats)
+
+topTab = topTab_XXvsX_ #topTab_XXvsX_ #topTab_XmvsXp
+comparison = 'XXvsX_' #'XXvsX_' #'XmvsXp'
+entrezUni = unique(topTab$ENTREZID)
+whichgenes = topTab["P.Value"]<0.01
+geneIds = unique(topTab$ENTREZID[whichgenes])
+geneIds
+
+# Definimos los hyper parámetros
+paramsGO <- new("GOHyperGParams", geneIds =geneIds, universeGeneIds = entrezUni, annotation = "hgu133plus2.db", ontology = "BP", testDirection = "over", pvalueCutoff=0.01) 
+paramsKEGG <- new("KEGGHyperGParams", geneIds = geneIds, universeGeneIds = entrezUni, annotation = "hgu133plus2.db",pvalueCutoff = 0.01, testDirection = "over")
+
+# Instanciamos ambos tests
+hypGO <- hyperGTest(paramsGO)
+hypKEGG <- hyperGTest(paramsKEGG)
+
+# Almacenamos el resultado en html
+htmlReport(hypGO, file=paste0(resultsDir,'/GOResults',comparison,'.html'))
+htmlReport(hypKEGG, file=paste0(resultsDir,'/KEGGResults',comparison,'.html'))
+```
+
 
 ```{r ??}
 # Cluster jerarquico
@@ -200,35 +232,15 @@ plot(hclust(dist(t(exprs(rawData))),method = "average"))
 # Tipo de placa
 #cdfName(rawData)
 image(rawData[,1],col=rainbow(100))
-```
 
-```{r anotacion}
+# Para las anotaciones
 library(hgu133plus2.db)
-#library(annaffy)
-#topTab_XmvsXp_anno <- aafTableAnn(topTab_XmvsXp, hgu133plus2.db, aaf.handler())
+library(annaffy)
+tt <- aafTableAnn(pro_filt_data, hgu133plus2.db)
 library(affycoretools)
-#test <- annotateEset(topTab_XmvsXp, hgu133plus2.db)
+test <- annotateEset(pro_filt_data, hgu133plus2.db)
 
-
-annotatedTopTable <- function(topTab, anotPackage){
-  topTab <- cbind(PROBEID=rownames(topTab), topTab)
-  myProbes <- rownames(topTab)
-  thePackage <- eval(parse(text = anotPackage))
-  geneAnots <- select(thePackage, myProbes, c("SYMBOL", "ENTREZID", "GENENAME"))
-  annotatedTopTab<- merge(x=geneAnots, y=topTab, by.x="PROBEID", by.y="PROBEID")
-  return(annotatedTopTab)}
-
-topTab_XmvsXp_anno <- annotatedTopTable(topTab_XmvsXp, anotPackage="hgu133plus2.db")
-topTab_XXvsX_anno <- annotatedTopTable(topTab_XXvsX_, anotPackage="hgu133plus2.db")
-
-
-geneSymbols <- select(hgu133plus2.db, rownames(fit.main), c("SYMBOL"))
-SYMBOLS<- geneSymbols$SYMBOL
-volcanoplot(fit.main, coef=1, highlight=10, names=SYMBOLS, main=paste("Differentially expressed genes", colnames(contMatrix)[1], sep="\n"))
-abline(v=c(-1,1))
-```
-
-```{r comp_mult}
+# Comp mult
 library(limma)
 res<-decideTests(fit.main, method="separate", adjust.method="fdr", p.value=0.05, lfc=1)
 
@@ -238,22 +250,4 @@ print(summary(res))
 
 vennDiagram (res.selected[,1:2], cex=0.9)
 title("Genes in common between the three comparisons\n Genes selected with FDR < 0.1 and logFC > 1")
-
-
-#MAPAS de calor....
-```
-
-```{r signicacion}
-library(limma)
-res<-decideTests(fit.main, method="separate", adjust.method="fdr", p.value=0.05, lfc=1)
-
-sum.res.rows<-apply(abs(res),1,sum)
-res.selected<-res[sum.res.rows!=0,] 
-print(summary(res))
-
-vennDiagram (res.selected[,1:2], cex=0.9)
-title("Genes in common between the three comparisons\n Genes selected with FDR < 0.1 and logFC > 1")
-
-
-#MAPAS de calor....
 ```
