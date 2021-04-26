@@ -144,8 +144,8 @@ plot(qualityAnalysisRaw)
 colnames(processedData)<-myTargets$title
 #boxplot(processedData, cex.axis=0.8, las=2, col=c(rep("red", 6), rep("blue", 6), rep("green", 6)),main="Distribución de los valores de intensidad en crudo")
 #image(rawData[,7],col=rainbow(100))
-#image(rawData[,1],col=rainbow(100))
-
+image(rawData[,1],col=rainbow(100))
+colnames(rawData[,1])
 ```
 
 
@@ -177,8 +177,8 @@ head(topTab_XXvsX_)
 
 
 # Visualización rápida
-volcanoplot(fit.main, coef=1, highlight=4, names=fit.main$ID, 
-             main=paste("Differentially expressed genes", colnames(contMatrix)[1], sep="\n"))
+volcanoplot(fit.main, coef=2, highlight=10, names=fit.main$ID, 
+             main=paste("Differentially expressed genes", colnames(contMatrix)[2], sep="\n"))
 abline(v=c(-1,1))
 ```
 
@@ -198,6 +198,31 @@ annotatedTopTable <- function(topTab, anotPackage){
   annotatedTopTab<- merge(x=geneAnots, y=topTab, by.x="PROBEID", by.y="PROBEID")
   return(annotatedTopTab)}
 
-test1 <- annotatedTopTable(topTab_XmvsXp,anotPackage="hgu133plus2.db")
-head(test1,5)
+topTab_XmvsXp_anno <- annotatedTopTable(topTab_XmvsXp, anotPackage="hgu133plus2.db")
+topTab_XXvsX_anno <- annotatedTopTable(topTab_XXvsX_, anotPackage="hgu133plus2.db")
+
+
+geneSymbols <- select(hgu133plus2.db, rownames(fit.main), c("SYMBOL"))
+SYMBOLS<- geneSymbols$SYMBOL
+volcanoplot(fit.main, coef=1, highlight=10, names=SYMBOLS, main=paste("Differentially expressed genes", colnames(contMatrix)[1], sep="\n"))
+abline(v=c(-1,1))
+```
+
+```{r comp_mult}
+library(limma)
+res<-decideTests(fit.main, method="separate", adjust.method="fdr", p.value=0.05, lfc=1)
+
+sum.res.rows<-apply(abs(res),1,sum)
+res.selected<-res[sum.res.rows!=0,] 
+print(summary(res))
+
+vennDiagram (res.selected[,1:2], cex=0.9)
+title("Genes in common between the three comparisons\n Genes selected with FDR < 0.1 and logFC > 1")
+
+
+#MAPAS de calor....
+```
+
+```{r significacion}
+
 ```
