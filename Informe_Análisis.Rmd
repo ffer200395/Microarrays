@@ -6,7 +6,7 @@ output:
   html_document:
     toc: yes
     number_sections: yes
-    theme: cerulean
+    theme: lumen
 ---
 Repositorio en github: <https://github.com/ffer200395/Microarrays.git>
 ```{r setup, include=FALSE}
