@@ -1,4 +1,2 @@
-# Microarrays
-PEC1 de ADO de la UOC
-
-#Test 20/03/1995
+# Análisis de microarrays
+PEC1 de la asignatura ADO de la UOC.

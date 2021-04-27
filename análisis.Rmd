@@ -1,0 +1,241 @@
+---
+title: "Identificación de genes que intervienen en la patogénesis del síndrome de Turner"
+author: "Félix Francisco Enríquez Romero"
+date: "20/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r imports}
+# Instalación de paquetes requeridos
+if (!(require(stringr))) install.packages("stringr")
+if (!(require(tm))) install.packages("tm")
+if (!(require(gridExtra))) install.packages("gridExtra")
+if (!(require(BiocManager))) install.packages("BiocManager")
+
+if (!require(affy))BiocManager::install("affy")
+if (!require(affycoretools))BiocManager::install("affycoretools")
+if (!require(genefilter))BiocManager::install("genefilter")
+if (!require(GOstats))BiocManager::install("GOstats")
+if (!(require(hgu133plus2.db)))BiocManager::install("hgu133plus2.db")
+if (!require(Biobase))BiocManager::install("Biobase")
+if (!require(simpleaffy))BiocManager::install("simpleaffy")
+if (!require(affyPLM))BiocManager::install("affyPLM")
+```
+
+```{r load}
+library(Biobase)
+library(affy)
+library(tm)
+
+# Directorios
+workingDir <- getwd()
+rawDataDir <- file.path(workingDir, "raw_data")
+resultsDir <- file.path(workingDir, "results")
+
+# Función para elegir muestras aleatoriamente
+selectSamples<- function (myID){
+ set.seed(myID)
+ selected <- c(sample(1:10, 6),11, sample(12:26, 5), sample(27:36,6))
+ selected <- sort(selected)
+}
+
+# Seleccionamos las muestras y almacenamos el nombre de los archivos .CEL
+mySelected <- selectSamples(49044820)# Número aleatorio
+targetsAll <- read.csv(file="targetsAll.csv", row.names = 1, head=TRUE)
+myTargets <- targetsAll[mySelected,]
+fileNames <- row.names(myTargets)
+
+# Obtenemos el nombre completo de los archivos .CEL
+all_files <- list.files("raw_data/", pattern = "*.CEL.gz", full.names = FALSE) # Todos
+selectFiles <- c() # Los que se necesitan
+for(i in 1:length(all_files)){
+  fullName = all_files[i]
+  name = unlist(strsplit(fullName,"_"))[1] 
+  if(is.element(name,fileNames)){ # Si el nombre está en nuestro listado entonces lo añadimos
+    selectFiles <- c(selectFiles,fullName)
+  }
+}
+
+# Modificamos la columna karyotype para que no contenga números
+myTargets$karyotype <- removeNumbers(myTargets$karyotype)
+
+# Por último leemos los archivos .CEL que nos interesa y creamos un objeto de tipo AffyBatch
+rawData <- read.affybatch(filenames = file.path(rawDataDir,selectFiles),phenoData=AnnotatedDataFrame(myTargets))
+
+# Para tener unos nombres más intuitivos
+myTargets$title -> colnames(exprs(rawData))
+
+# Para obtener la tabla de los grupos
+library(gridExtra)
+png(file=paste0(resultsDir,'/grupos.png'))
+grid.table(myTargets)
+```
+
+```{r qcRaw}
+library(simpleaffy)
+library(affyPLM)
+
+png(file=paste0(resultsDir,'/boxplot_qcRaw.png'))
+# Diagrama de cajas para obtener una idea de las distribución de las intensidades de las distintas muestras
+boxplot(rawData, cex.axis=0.8, las=2, col=c(rep("red", 6), rep("blue", 6), rep("green", 6)),main="Distribución de los valores de intensidad en crudo")
+
+png(file=paste0(resultsDir,'/hist_qcRaw.png'))
+# Histograma para conocer si las distribuciones de los distintos arrays son similares
+hist(rawData, main="Distribución de las señales")
+
+# Hacemos Anális de Componentes Principales (PCA)
+PCA_s <- prcomp(t(exprs(rawData)))
+png(file=paste0(resultsDir,'/pca_qcRaw.png'))
+plot(PCA_s$x[, 1:2],pch=18, col="blue",main="PCA sobre los datos en crudo")
+text(PCA_s$x[, 1:2], row.names(PCA_s$x), cex=0.7, pos=4, offset = 0,col="red")
+
+# Control de calidad en crudo
+qualityAnalysisRaw <- qc(rawData)
+png(file=paste0(resultsDir,'/qc_statsRaw.png'))
+plot(qualityAnalysisRaw)
+```
+
+```{r norm}
+# Normalización
+processedData <- affy::rma(rawData)
+
+# Para tener unos nombres más intuitivos
+colnames(processedData) <- myTargets$title
+
+# Guardar
+write.csv(exprs(processedData), file=paste0(resultsDir,'/normalized.Data.csv'))
+```
+
+```{r filtro}
+library(genefilter)
+library(hgu133plus2.db)
+
+# La anotación que utiliza el tipo de microarray con el que trabajamos
+annotation(processedData) <- "hgu133plus2.db"
+
+# A los datos procesados le aplicamos el filtro 
+filtered <- nsFilter(processedData, require.entrez = TRUE, remove.dupEntrez = TRUE, var.filter=TRUE, var.func=IQR, var.cutoff=0.75, filterByQuantile=TRUE, feature.exclude = "^AFFX")
+
+# Almacenamos los datos filtrados en una nueva variable
+pro_filt_data <-filtered$eset
+
+# Guardar
+write.csv(exprs(pro_filt_data), file=paste0(resultsDir,'/normalized.Filtered.Data.csv'))
+
+# Cuantos genes quedan
+dim(pro_filt_data@assayData$exprs)[1]
+```
+
+```{r gde}
+library(limma)
+library(stringr)
+library(affycoretools)
+
+# Matriz de diseño, 1 Factor de 3 niveles: XX, Xm, Xp
+grupo <- as.factor(myTargets$karyotype)
+designMatrix <- model.matrix(~0 + grupo)
+colnames(designMatrix) <- str_replace_all(colnames(designMatrix), "grupo","")
+
+# Contrastar Xm vs Xp y Xm+Xp vs XX
+# Ver las diferencias entre las pacientes con TS
+# Ver las diferencias entre las pacientes con TS y las pacientes sanas
+contMatrix <- makeContrasts(XmvsXp = Xm - Xp, XXvsX_ = XX - ((Xp+Xm)/2),levels=designMatrix)
+contMatrix
+
+# Anotamos los genes para después obtener las topTable anotadas
+pro_filt_data_ann <- annotateEset(pro_filt_data, hgu133plus2.db)
+
+# Creamos el modelo lineal 
+fit<-lmFit(pro_filt_data_ann, designMatrix)
+fit.main<-contrasts.fit(fit, contMatrix)
+fit.main<-eBayes(fit.main)
+class(fit.main)
+
+# Ahora toca obtener las listas de GDEs
+topTab_XmvsXp <- topTable (fit.main, number=nrow(fit.main), coef="XmvsXp", adjust="fdr") 
+topTab_XXvsX_ <- topTable (fit.main, number=nrow(fit.main), coef="XXvsX_", adjust="fdr")
+head(topTab_XmvsXp)
+head(topTab_XXvsX_)
+
+# Mostramos los volcano plots de ambos contrastes
+geneSymbols <- select(hgu133plus2.db, rownames(fit.main), c("SYMBOL"))
+SYMBOLS<- geneSymbols$SYMBOL
+png(file=paste0(resultsDir,'/volcPlot_XmXp.png'))
+volcanoplot(fit.main, coef=1, highlight=10, names=SYMBOLS, main=paste("Genes diferencialmente expresados", colnames(contMatrix)[1], sep="\n"))
+abline(v=c(-1,1))
+png(file=paste0(resultsDir,'/volcPlot_XXX_.png'))
+volcanoplot(fit.main, coef=2, highlight=10, names=SYMBOLS, main=paste("Genes diferencialmente expresados", colnames(contMatrix)[2], sep="\n"))
+abline(v=c(-1,1))
+
+# Save
+png(file=paste0(resultsDir,'/designMatrix.png'),width = 400, height = 400)
+grid.table(designMatrix)
+png(file=paste0(resultsDir,'/contMatrix.png'),width = 160, height = 160)
+grid.table(contMatrix)
+png(file=paste0(resultsDir,'/topTable_XmvsXp.png'),width = 1000, height = 200)
+grid.table(head(topTab_XmvsXp,5))
+png(file=paste0(resultsDir,'/topTable_XXvsX_.png'),width = 1100, height = 200)
+grid.table(head(topTab_XXvsX_,5))
+write.csv(topTab_XmvsXp, file=paste0(resultsDir,'/topTable_XmvsXp.csv'))
+write.csv(topTab_XXvsX_, file=paste0(resultsDir,'/topTable_XXvsX_.csv'))
+```
+
+```{r signicacion}
+library(GOstats)
+
+# Que tabla vamos a usar
+topTab = topTab_XXvsX_ #topTab_XXvsX_ #topTab_XmvsXp
+comparison = 'XXvsX_' #'XXvsX_' #'XmvsXp'
+
+# Almacenamos todo el conjunto de genes y los genes más diferenciados según un umbral del p-valor
+entrezUni = unique(topTab$ENTREZID)
+whichgenes = topTab["P.Value"]<0.01
+geneIds = unique(topTab$ENTREZID[whichgenes])
+
+# Definimos los hyper parámetros para realizar las búsquedas
+paramsGO <- new("GOHyperGParams", geneIds =geneIds, universeGeneIds = entrezUni, annotation = "hgu133plus2.db", ontology = "BP", testDirection = "over", pvalueCutoff=0.01) 
+paramsKEGG <- new("KEGGHyperGParams", geneIds = geneIds, universeGeneIds = entrezUni, annotation = "hgu133plus2.db",pvalueCutoff = 0.01, testDirection = "over")
+
+# Instanciamos ambos tests
+hypGO <- hyperGTest(paramsGO)
+hypKEGG <- hyperGTest(paramsKEGG)
+
+# Almacenamos el resultado en html
+htmlReport(hypGO, file=paste0(resultsDir,'/GOResults',comparison,'.html'))
+htmlReport(hypKEGG, file=paste0(resultsDir,'/KEGGResults',comparison,'.html'))
+
+```
+
+```{r other}
+# Cluster jerarquico
+plot(hclust(dist(t(exprs(rawData))),method = "average"))
+
+# Los grupos presentes en el experimento son
+#unique(myTargets['karyotype'])
+
+# Tipo de placa
+#cdfName(rawData)
+image(rawData[,1],col=rainbow(100))
+
+# Para las anotaciones
+library(hgu133plus2.db)
+library(annaffy)
+tt <- aafTableAnn(pro_filt_data, hgu133plus2.db)
+library(affycoretools)
+test <- annotateEset(pro_filt_data, hgu133plus2.db)
+
+# Comp mult
+library(limma)
+res<-decideTests(fit.main, method="separate", adjust.method="fdr", p.value=0.05, lfc=1)
+
+sum.res.rows<-apply(abs(res),1,sum)
+res.selected<-res[sum.res.rows!=0,] 
+print(summary(res))
+
+vennDiagram (res.selected[,1:2], cex=0.9)
+title("Genes in common between the three comparisons\n Genes selected with FDR < 0.1 and logFC > 1")
+```
