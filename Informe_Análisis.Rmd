@@ -9,55 +9,16 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## INDICE
-[1.Abstract](#abstract)
-
-[2.Objetivos](#objetivos)
-
-[3.Materiales y métodos](#matmet)
-
-[3.1.Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados](#datos)
-  
-[3.2.Métodos utilizados en el análisis (Pipeline)](#pipeline)
-  
-[3.3.Descripción cualitativa de cada paso](#steps)
-
-[4.Resultados del análisis](#resultados)
-
-[5.Discusión](#dicusion)
-
-[6.Apéndice](#apendice)
-
-
-
-
-## 1.Abstract {#abstract}
-
-## 2.Objetivos {#objetivos}
-
-## 3.Materiales y métodos {#matmet}
-
-## 3.1.Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados {#datos}
-
-## 3.2.Métodos utilizados en el análisis (Pipeline) {#pipeline}
-
-## 3.3.Descripción cualitativa de cada paso {#steps}
-
-## 4.Resultados del análisis {#resultados}
-
-## 5.Discusión {#dicusion}
-
-## 6.Apéndice {#apendice}
-
-```{r imports, message=FALSE}
+```{r imports}
+# Instalación de paquetes requeridos
 if (!(require(stringr))) install.packages("stringr")
 if (!(require(tm))) install.packages("tm")
 if (!(require(BiocManager))) install.packages("BiocManager")
+
 if (!require(affy))BiocManager::install("affy")
 if (!require(affycoretools))BiocManager::install("affycoretools")
 if (!require(genefilter))BiocManager::install("genefilter")
 if (!require(GOstats))BiocManager::install("GOstats")
-
 if (!(require(hgu133plus2.db)))BiocManager::install("hgu133plus2.db")
 if (!require(Biobase))BiocManager::install("Biobase")
 if (!require(simpleaffy))BiocManager::install("simpleaffy")
@@ -65,8 +26,8 @@ if (!require(affyPLM))BiocManager::install("affyPLM")
 ```
 
 ```{r load}
-#library(Biobase)
-#library(affy)
+library(Biobase)
+library(affy)
 library(tm)
 
 # Directorios
@@ -82,7 +43,7 @@ selectSamples<- function (myID){
 }
 
 # Seleccionamos las muestras y almacenamos el nombre de los archivos .CEL
-mySelected <- selectSamples(49044820)
+mySelected <- selectSamples(49044820)# Número aleatorio
 targetsAll <- read.csv(file="targetsAll.csv", row.names = 1, head=TRUE)
 myTargets <- targetsAll[mySelected,]
 fileNames <- row.names(myTargets)
@@ -109,8 +70,8 @@ myTargets$title -> colnames(exprs(rawData))
 ```
 
 ```{r qcRaw}
-#library(simpleaffy)
-#library(affyPLM)
+library(simpleaffy)
+library(affyPLM)
 
 png(file=paste0(resultsDir,'/boxplot_qcRaw.png'))
 # Diagrama de cajas para obtener una idea de las distribución de las intensidades de las distintas muestras

@@ -1,17 +1,17 @@
 ---
-title: "test_Informe"
-author: "Félix Francisco Enríquez Romero"
+title: "Identificación de genes que intervienen en la patogénesis del síndrome de Turner"
+author: "Félix Francisco Enríquez Romero" 
 date: "15/4/2021"
 output:
   html_document:
     toc: yes
     number_sections: yes
-    theme: paper
+    theme: cerulean
 ---
-
+Repositorio en github: <https://github.com/ffer200395/Microarrays.git>
 ```{r setup, include=FALSE}
 library(knitr)
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = T, eval = FALSE)
 ```
 
 # Abstract
@@ -107,6 +107,108 @@ Por último, usamos los identificadores de los genes que muestran una expresión
 
 # Resultados del análisis
 
-Que se obtiene como resultado del análisis
+Tras la carga de los datos y la selección de las muestras realizamos un análisis exploratorio y un control de calidad de los datos en crudo. 
+
+
+Que se obtiene como resultado del análisis *Comentar código de mientras e ir hacendo el knit a la vez
+
+-Tabla con grupos y muestras.
+-Plots del control de calidad y comentarlos.
+-Mostrar genes eliminados en el filtro.
+
+-Mostrar matriz de diseño/contraste
+
+-Mostrar las top table
+
+-Mostrar los vulcano plots
+
+-Mostrar .... de la significación biológica .... y entrar en detalles
 
 # Apéndice
+
+```{r imports}
+# Instalación de paquetes requeridos
+if (!(require(stringr))) install.packages("stringr")
+if (!(require(tm))) install.packages("tm")
+if (!(require(knitr))) install.packages("knitr")
+if (!(require(BiocManager))) install.packages("BiocManager")
+
+if (!require(affy))BiocManager::install("affy")
+if (!require(affycoretools))BiocManager::install("affycoretools")
+if (!require(genefilter))BiocManager::install("genefilter")
+if (!require(GOstats))BiocManager::install("GOstats")
+if (!(require(hgu133plus2.db)))BiocManager::install("hgu133plus2.db")
+if (!require(Biobase))BiocManager::install("Biobase")
+if (!require(simpleaffy))BiocManager::install("simpleaffy")
+if (!require(affyPLM))BiocManager::install("affyPLM")
+```
+
+```{r load}
+library(Biobase)
+library(affy)
+library(tm)
+
+# Directorios
+workingDir <- getwd()
+rawDataDir <- file.path(workingDir, "raw_data")
+resultsDir <- file.path(workingDir, "results")
+
+# Función para elegir muestras aleatoriamente
+selectSamples<- function (myID){
+ set.seed(myID)
+ selected <- c(sample(1:10, 6),11, sample(12:26, 5), sample(27:36,6))
+ selected <- sort(selected)
+}
+
+# Seleccionamos las muestras y almacenamos el nombre de los archivos .CEL
+mySelected <- selectSamples(49044820)# Número aleatorio
+targetsAll <- read.csv(file="targetsAll.csv", row.names = 1, head=TRUE)
+myTargets <- targetsAll[mySelected,]
+fileNames <- row.names(myTargets)
+
+# Obtenemos el nombre completo de los archivos .CEL
+all_files <- list.files("raw_data/", pattern = "*.CEL.gz", full.names = FALSE) # Todos
+selectFiles <- c() # Los que se necesitan
+for(i in 1:length(all_files)){
+  fullName = all_files[i]
+  name = unlist(strsplit(fullName,"_"))[1] 
+  if(is.element(name,fileNames)){ # Si el nombre está en nuestro listado entonces lo añadimos
+    selectFiles <- c(selectFiles,fullName)
+  }
+}
+
+# Modificamos la columna karyotype para que no contenga números
+myTargets$karyotype <- removeNumbers(myTargets$karyotype)
+
+# Por último leemos los archivos .CEL que nos interesa y creamos un objeto de tipo AffyBatch
+rawData <- read.affybatch(filenames = file.path(rawDataDir,selectFiles),phenoData=AnnotatedDataFrame(myTargets))
+
+# Para tener unos nombres más intuitivos
+myTargets$title -> colnames(exprs(rawData))
+```
+
+```{r qcRaw}
+library(simpleaffy)
+library(affyPLM)
+
+png(file=paste0(resultsDir,'/boxplot_qcRaw.png'))
+# Diagrama de cajas para obtener una idea de las distribución de las intensidades de las distintas muestras
+boxplot(rawData, cex.axis=0.8, las=2, col=c(rep("red", 6), rep("blue", 6), rep("green", 6)),main="Distribución de los valores de intensidad en crudo")
+
+png(file=paste0(resultsDir,'/hist_qcRaw.png'))
+# Histograma para conocer si las distribuciones de los distintos arrays son similares
+hist(rawData, main="Distribución de las señales")
+
+# Hacemos Anális de Comonentes Principales (PCA)
+PCA_s <- prcomp(t(exprs(rawData)))
+png(file=paste0(resultsDir,'/pca_qcRaw.png'))
+plot(PCA_s$x[, 1:2],pch=18, col="blue",main="PCA sobre los datos en crudo")
+text(PCA_s$x[, 1:2], row.names(PCA_s$x), cex=0.7, pos=4, offset = 0,col="red")
+
+# Control de calidad en crudo
+qualityAnalysisRaw <- qc(rawData)
+png(file=paste0(resultsDir,'/qc_statsRaw.png'))
+plot(qualityAnalysisRaw)
+```
+
+
