@@ -1,54 +1,62 @@
 ---
 title: "test_Informe"
 author: "Félix Francisco Enríquez Romero"
-date: "20/4/2021"
+date: "15/4/2021"
 output:
   html_document:
     toc: yes
-    df_print: paged
-  prettydoc::html_pretty:
-    toc: yes
-    theme: cayman
-    highlight: github
     number_sections: yes
+    theme: paper
 ---
 
 ```{r setup, include=FALSE}
 library(knitr)
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
-                      comment = NA, prompt = TRUE, tidy = FALSE, 
-                      fig.width = 7, fig.height = 7, fig_caption = TRUE,
-                      cache=FALSE)
-Sys.setlocale("LC_TIME", "C")
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# 1. Abstract
+# Abstract
 
-Resumen, máximo 5 lineas
+El síndrome de Turner es un trastorno genético que afecta a mujeres y se caracteriza por la pérdida de uno de sus cromosomas sexuales X. Las pacientes con dicho síndrome presenta una amplia variedad de síntomas entre los que destacan baja estatura, infertilidad y deformidades oseas.
 
-# 2. Objetivos
+Dependiendo del origen parental del cromosoma X se puede hacer distinción entre las pacientes Xm y Xp en función de si el cromosoma X heredado proviene la madre o del padre. Fenotípicamente las pacientes con síndrome de Turner Xm y Xp difieren en la severidad de los síntomas.
 
-Qué se pretende con el estudio
+Los mecanismos que dan lugar al síndrome de Turner son complejos y aún no están claros.
 
-# 3. Materiales y métodos
+# Objetivos
 
-## 3.1. Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados 
+* Identificar genes diferencialmente expresados entre:
+  + Mujeres que presentan el síndrome de Turner (X_) y las que no (XX).
+  + Mujeres con ST cuyo cromosoma X es heredado de la madre (Xm) y las que heredaron del padre (Xp).
+  
+* Mostrar los pasos realizados en el análisis y proveer al investigador/a de resultados que le permita realizar una interpretación biológica.
 
-Comparativo...
+# Materiales y métodos
 
-Matriz de sieño contraste...
+## Naturaleza de los datos, tipo de experimento, diseño experimental y tipo de microarrays utilizados 
 
-Tipo de microarray affymetrix...
+Partimos de unos datos en formato .CEL que son la expresión génica en microarrays de tipo "Affymetrix Human Genome U133 Plus 2.0 Array" de mujeres con y sin síndrome de Turner. El dataset original puede obtenerse en Gene Expresion Omnibus ([GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE46687)) con el identificador "GSE46687" descargando los archivos .CEL. 
 
-Anotación...
+Tras aplicar una función que selecciona muestras del dataset original obtenemos un dataset balanceado de 18 muestras, 6 por cariotipo (45Xm, 45Xp, 46XX).
 
-## 3.2. Métodos utilizados en el análisis (Pipeline)
+Estamos ante un estudio observacional de un factor con 3 niveles que corresponden con el tipo de cariotipo. Por un lado se realiza una comparación X_ vs XX con el fin de estudiar los cambios de expresión a nivel genómico entre mujeres con ST y las que no. Otra comparación que se realiza es Xm vs Xp con el fin de estudiar el impacto fenotipico en el ST dependiendo si el cromosoma X proviene por vía materna o paterna.
 
-Contar de manera general todo lo realizado en el código
+## Métodos utilizados en el análisis (Pipeline)
 
-## 3.3. Descripción cualitativa de cada paso
+El proceso de análisis de microarrays sigue un flujo de trabajo ordenado que va desde la correcta lectura y control de calidad de los datos a un análisis de la significación biológica de los resultados.
 
-### 3.3.1. Carga de los datos
+Tras descargar los archivos .CEL se selecciona una muestra aleatoria que contenga individuos pertenecientes a los 3 grupos del experimento. Los archivos .CEL de los individuos que son seleccionados se cargan en el entorno de trabajo usando a función read.affybatch del paquete affy. Estos datos primeros pasan por un control de calidad en crudo que nos permitirá detectar posibles anomalías/errores en las muestras seleccionadas.
+
+Si se observan que los datos presentan suficiente calidad pasamos a normalizarlos. Se normalizan con el fin de reducir la variabilidad entre las muestras que no sea debida a factores biológicos, hacer las muestras comparables entre sí y reducir el ruido de fondo. Una vez son normalizados se les aplica un filtraje no específico que permite eliminar los genes que varían poco entre los grupos o de los cuales no se dispone de anotacion.
+
+Realizamos la anotación de los genes como paso previo a la obtención de las listas de genes diferencialmente expresados (GDEs). Para obtener estas listas se ha optado por el uso de modelos lineales implementado en el paquete [limma](https://bioconductor.org/packages/release/bioc/html/limma.html), por lo que hemos definido una matriz de diseño que modela el experimento y una matriz de contraste que nos permitirá hacer comparaciones entre los parámetros del modelo estimado. 
+
+Haciendo uso de las funciones constrasts.fit y eBayes del paquete limma se calcula el log fold-change y los p-valores correspondientes para cada gen en cada uno de los constrastes planteados. Con la función topTable se obtiene un data.frame con información sobre la expresión diferencial de los genes.
+
+Por último, usamos los identificadores de los genes que muestran una expresión diferencial estadísticamente significativa y la función hyperGTest del paquete GOstats para obtener resultados de búsqueda relacionados con la función biológica de los conjuntos de genes encontrados o las rutas metabólicas en las que están implicados.
+
+## Descripción cualitativa de cada paso
+
+### Carga de los datos
 
 - Objetivo: Crear un objeto del tipo AffyBatch con el que poder comenzar el análisis de los datos.
 
@@ -56,7 +64,7 @@ Contar de manera general todo lo realizado en el código
 
 - Output: Objeto AffyBatch llamado **rawData** sobre el que empezaremos a trabajar.
 
-### 3.3.2. Control de calidad de los datos en crudo
+### Control de calidad de los datos en crudo
 
 - Objetivo: Determinar si los datos de las muestra datos es de suficiente para su posterior normalización o si es necesario eliminar alguna para mejorar la calidad del experimento.
 
@@ -64,7 +72,7 @@ Contar de manera general todo lo realizado en el código
 
 - Output: Boxplot **boxplot_qcRaw.png**, histograma **hist_qcRaw.png** y salida de la función qc() **qc_statsRaw.png**.
 
-### 3.3.3. Normalización
+### Normalización
 
 - Objetivo: Corregir diferencias sistemáticas entre las muestras y transformar los datos de forma que estos sean comparables entre sí.
 
@@ -72,7 +80,7 @@ Contar de manera general todo lo realizado en el código
 
 - Output: Objeto ExpressionSet **processedData** obtenido al aplicar la función rma() del paquete affy (almacenado en **normalized.Data.csv**).
 
-### 3.3.4. Filtraje no específico
+### Filtraje no específico
 
 - Objetivo: Eliminar ruido de fondo mediante la eliminación de genes que no muestran una variación significativa en su señal.
 
@@ -80,7 +88,7 @@ Contar de manera general todo lo realizado en el código
 
 - Output: Objeto ExpresionSet **pro_filt_data** obtenido tras aplicar la función nsFilter() del paquete genefilter (almacenado en **normalized.Filtered.Data.csv**).
 
-### 3.3.5. Selección y anotación de genes diferencialmente expresados
+### Selección y anotación de genes diferencialmente expresados
 
 - Objetivo: Determinar que genes son los que se están expresando de manera diferencial de estadísiticamente significativa.
 
@@ -88,7 +96,7 @@ Contar de manera general todo lo realizado en el código
 
 - Output: Dos data.frame **topTab_XmvsXp** y **topTab_XXvsX_** que contienen las listas de genes anotados con mayor diferencia en su expresión correspondientes a los dos contrastes que hemos realizado. Además los volcano plots han sido almacenados en los archivos **volcPlot_XXX_.png** y **volcPlot_XmXp.png**.
 
-### 3.3.6. Análisis de la significación biológica (“Gene Enrichment Analysis”)
+### Análisis de la significación biológica (“Gene Enrichment Analysis”)
 
 - Objetivo: Establecer si un proceso biológico o ruta metabólica aparece con mayor o menor frecuencia en la lista de genes seleccionados respecto al conjunto total de genes desde donde se ha obtenido.
 
@@ -97,6 +105,8 @@ Contar de manera general todo lo realizado en el código
 - Output: Archivos .html del anális de enriquecimiento (prefijos GO y KEGG).
 
 
-# 4. Resultados del análisis
+# Resultados del análisis
 
-# 5. Apéndice
+Que se obtiene como resultado del análisis
+
+# Apéndice

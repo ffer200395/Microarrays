@@ -130,6 +130,8 @@ text(PCA_s$x[, 1:2], row.names(PCA_s$x), cex=0.7, pos=4, offset = 0,col="red")
 qualityAnalysisRaw <- qc(rawData)
 png(file=paste0(resultsDir,'/qc_statsRaw.png'))
 plot(qualityAnalysisRaw)
+
+# QCReport(rawData, file=file.path(resultsDir,"QCReport.pdf"))
 ```
 
 ```{r norm}
